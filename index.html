@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     
     <!-- Sets the title for the app icon on the home screen -->
-    <meta name="apple-mobile-web-app-title" content="Inventory">
+    <meta name="apple-mobile-web-app-title" content="Supplies">
     
     <!-- 
       Sets the status bar style. 'default' is standard. 
@@ -30,116 +30,176 @@
     <!-- 1. Load Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Simple scrollbar for the table container on small screens */
-/* ... existing code ... -->
+        /* Custom styles */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6; /* A slightly softer gray */
+        }
+        
+        /* Style for the fixed header on the form */
+        #formHeader {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            z-index: 10;
+        }
+
+        /* Active state for button choices */
+        .btn-choice.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        /* Simple loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Custom styles for date and time inputs to ensure proper sizing */
+        input[type="date"], input[type="datetime-local"] {
+            width: 90%; /* Reverts to the browser's default sizing */
+            max-width: 100%; /* Ensures it doesn't exceed its container */
+            box-sizing: border-box;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans p-4 md:p-8">
+<body class="antialiased text-gray-900">
 
-    <div class="max-w-6xl mx-auto">
-        
-        <!-- Main container for form and table -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Main Container -->
+    <!-- Removed max-w-6xl and mx-auto to use full width -->
+    <div class="container p-4 sm:p-6 lg:p-8">
+
+        <!-- Grid Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Left Column: Form -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
-                <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Inventory Form</h1>
-
-                <!-- Message area for success/error feedback -->
-                <div id="messageArea" class="p-3 mb-4 rounded-lg text-sm">
-                    <!-- Messages will be injected here -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-screen overflow-y-auto">
+                
+                <!-- Sticky Form Header -->
+                <div id="formHeader" class="border-b pb-4 mb-6">
+                    <h2 class="text-3xl font-bold text-gray-800">Log Supply</h2>
+                    <p class="text-gray-500">Add or edit an item.</p>
                 </div>
-
-                <!-- The form itself -->
-                <form id="inventoryForm" class="space-y-4">
+                
+                <form id="inventoryForm" class="space-y-6">
                     
-                    <!-- Hidden fields to manage state -->
-                    <input type="hidden" id="rowId" name="rowId">
-                    <input type="hidden" id="action" name="action" value="add">
+                    <!-- Hidden input for tracking edits -->
+                    <input type="hidden" id="editDocId" name="editDocId">
 
-                    <!-- Form Fields (Note: id and name are now camelCase) -->
+                    <!-- Cabinet Buttons -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Cabinet</label>
-                        <!-- Button group for cabinet selection -->
-                        <div id="cabinetButtons" class="flex space-x-2">
-                            <button type="button" data-value="1" class="cabinet-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">1</button>
-                            <button type="button" data-value="2" class="cabinet-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">2</button>
-                            <button type="button" data-value="3" class="cabinet-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">3</button>
-                            <button type="button" data-value="4" class="cabinet-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">4</button>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Cabinet</label>
+                        <div id="cabinetButtons" class="grid grid-cols-4 gap-2">
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="1">1</button>
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="2">2</button>
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="3">3</button>
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="4">4</button>
                         </div>
-                        <!-- Hidden input to store the actual value -->
-                        <input type="hidden" id="cabinet" name="cabinet" required>
+                        <input type="hidden" id="cabinet" name="cabinet">
                     </div>
 
+                    <!-- Shelf Buttons -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Shelf</label>
-                        <!-- Button group for shelf selection -->
-                        <div id="shelfButtons" class="flex space-x-2">
-                            <button type="button" data-value="A" class="shelf-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">A</button>
-                            <button type="button" data-value="B" class="shelf-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">B</button>
-                            <button type="button" data-value="C" class="shelf-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">C</button>
-                            <button type="button" data-value="D" class="shelf-btn flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">D</button>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Shelf</label>
+                        <div id="shelfButtons" class="grid grid-cols-4 gap-2">
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="A">A</button>
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="B">B</button>
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="C">C</button>
+                            <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="D">D</button>
                         </div>
-                        <!-- Hidden input to store the actual value -->
                         <input type="hidden" id="shelf" name="shelf">
                     </div>
 
+                    <!-- Item -->
                     <div>
-                        <label for="item" class="block text-sm font-medium text-gray-700 mb-1">Item</label>
-                        <input type="text" id="item" name="item" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+                        <label for="item" class="block text-sm font-medium text-gray-700">Item</label>
+                        <input type="text" name="item" id="item" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
 
+                    <!-- Quantity -->
                     <div>
-                        <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                        <input type="number" id="quantity" name="quantity" min="0" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+                        <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
+                        <input type="number" name="quantity" id="quantity" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                     </div>
 
+                    <!-- Earliest Expiration -->
                     <div>
-                        <label for="earliestExpiration" class="block text-sm font-medium text-gray-700 mb-1">Earliest Expiration</label>
-                        <input type="date" id="earliestExpiration" name="earliestExpiration" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <label for="earliestExpiration" class="block text-sm font-medium text-gray-700">Earliest Expiration</label>
+                        <input type="date" name="earliestExpiration" id="earliestExpiration" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-700">
                     </div>
 
+                    <!-- Notes -->
                     <div>
-                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea id="notes" name="notes" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                        <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                        <textarea name="notes" id="notes" rows="4" class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
                     </div>
 
                     <!-- Form Buttons -->
-                    <div class="flex space-x-4 pt-4">
-                        <button type="submit" id="submitButton" class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg shadow font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            Save New Entry
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button type="submit" id="submitButton" class="w-full flex-1 justify-center py-3 px-6 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Entry
                         </button>
-                        <button type="button" id="clearButton" class="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg shadow font-medium hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
-                            Clear Form
+                        <button type="button" id="clearButton" class="w-full sm:w-auto justify-center py-3 px-6 border border-gray-300 rounded-lg shadow-sm text-lg font-semibold text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                            Clear
                         </button>
                     </div>
                 </form>
+
+                <!-- Feedback Message Area -->
+                <div id="message" class="mt-6 p-4 rounded-lg text-center" style="display: none;"></div>
             </div>
 
             <!-- Right Column: Data Table -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg h-screen overflow-y-auto">
                 <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Existing Supplies</h2>
-                
-                <!-- Search and Export Container -->
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-                    <!-- Search Box -->
-                    <div class="flex-grow">
-                        <label for="searchBox" class="sr-only">Search Entries</label>
-                        <input type="text" id="searchBox" placeholder="Search by item, cabinet, or shelf..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    </div>
-                    <!-- Export Button -->
-                    <div>
-                        <button type="button" id="exportButton" class="w-full sm:w-auto bg-blue-600 text-white py-3 px-5 rounded-lg shadow font-medium hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            Export to CSV
-                        </button>
-                    </div>
+
+                <!-- Search and Export -->
+                <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                    <input type="text" id="searchBox" class="flex-grow w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Search by item, notes, or expiration...">
+                    
+                    <button id="exportButton" class="w-full sm:w-auto justify-center py-3 px-6 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        Export to CSV
+                    </button>
                 </div>
 
                 <!-- Table Container -->
-                <div id="tableContainer" class="overflow-x-auto">
-                    <!-- Table will be injected here -->
-                    <p id="loadingMessage" class="text-gray-500 text-center p-8">Authenticating and loading entries...</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Cabinet</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Shelf</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Item</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Quantity</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Expiration</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Notes</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Updated</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Edit</th>
+                                <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entriesTable" class="bg-white divide-y divide-gray-200">
+                            <!-- Rows will be injected here -->
+                        </tbody>
+                    </table>
+                    <!-- Loading State -->
+                    <div id="loadingIndicator" class="flex flex-col items-center justify-center p-8">
+                        <div class="spinner"></div>
+                        <p class="text-gray-500 mt-4">Loading entries...</p>
+                    </div>
+                    <p id="loadingMessage" class="text-gray-500 text-center p-8" style="display: none;">Authenticating and loading entries...</p>
                 </div>
             </div>
         </div>
@@ -173,16 +233,12 @@
 
     <!-- 
       Using a module script to import Firebase services.
-      This file now contains all logic.
+      This is the modern way to use Firebase on the web.
     -->
     <script type="module">
-        // --- FIREBASE SDK IMPORTS ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            signInAnonymously, 
-            onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        // Import functions from the Firebase SDK
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
             doc, 
@@ -191,38 +247,42 @@
             deleteDoc,
             onSnapshot, 
             collection, 
-            query,
-            serverTimestamp,
-            setLogLevel
+            serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CONFIGURATION ---
-        // Firebase config provided by user
+        // --- PASTE YOUR FIREBASE CONFIG HERE ---
         const firebaseConfig = {
-            apiKey: "AIzaSyBTjbo2ndQYowrvmcDxeXfvNb_E3nSijH8",
-            authDomain: "ems-inventory.firebaseapp.com",
-            projectId: "ems-inventory",
-            storageBucket: "ems-inventory.firebasestorage.app",
-            messagingSenderId: "1076236960850",
-            appId: "1:1076236960850:web:07cc24cd638ef4a8298b8b",
-            measurementId: "G-BFFXWP4G42"
+          apiKey: "AIzaSyBTjbo2ndQYowrvmcDxeXfvNb_E3nSijH8",
+          authDomain: "ems-inventory.firebaseapp.com",
+          projectId: "ems-inventory",
+          storageBucket: "ems-inventory.firebasestorage.app",
+          messagingSenderId: "1076236960850",
+          appId: "1:1076236960850:web:07cc24cd638ef4a8298b8b",
+          measurementId: "G-BFFXWP4G42"
         };
+        // ----------------------------------------
+        
+        const COLLECTION_NAME = 'supplies';
 
-        // Firebase Collection Name
-        const COLLECTION_NAME = "supplies";
-        // ---------------------
-
-        // Firebase App Instances
-        let db, auth;
-
-        // DOM Elements
+        // --- Global Variables ---
+        let db;
+        let auth;
+        let currentUserId; // To hold the authenticated user's ID
+        
+        // --- Form Elements ---
         const form = document.getElementById('inventoryForm');
+        const message = document.getElementById('message');
         const submitButton = document.getElementById('submitButton');
         const clearButton = document.getElementById('clearButton');
-        const messageArea = document.getElementById('messageArea');
-        const tableContainer = document.getElementById('tableContainer');
+        const editDocIdInput = document.getElementById('editDocId');
+        
+        // --- Table Elements ---
+        const tableBody = document.getElementById('entriesTable');
+        const loadingIndicator = document.getElementById('loadingIndicator');
         const loadingMessage = document.getElementById('loadingMessage');
         const searchBox = document.getElementById('searchBox');
+        
+        // --- Button Choice Elements ---
         const cabinetButtonsContainer = document.getElementById('cabinetButtons');
         const hiddenCabinetInput = document.getElementById('cabinet');
         const shelfButtonsContainer = document.getElementById('shelfButtons');
@@ -238,101 +298,94 @@
 
         /**
          * Displays a feedback message to the user.
-         * @param {string} message - The message to show.
-         * @param {boolean} [isError=false] - True if it's an error message.
+         * @param {string} msg - The message to show.
+         * @param {boolean} isError - True for error, false for success.
          */
-        function showMessage(message, isError = false) {
-            messageArea.textContent = message;
-            messageArea.className = 'p-3 mb-4 rounded-lg text-sm'; // Reset classes
-            if (isError) {
-                messageArea.classList.add('bg-red-100', 'text-red-700', 'show');
-            } else {
-                messageArea.classList.add('bg-green-100', 'text-green-700', 'show');
-            }
-            
-            // Hide the message after 5 seconds
+        function showMessage(msg, isError = false) {
+            message.textContent = msg;
+            message.className = `mt-6 p-4 rounded-lg text-center ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
+            message.style.display = 'block';
             setTimeout(() => {
-                messageArea.classList.remove('show');
-            }, 5000);
+                message.style.display = 'none';
+            }, 3000);
         }
 
         /**
-         * Resets the form to its default "add new" state.
-         */
-        function clearForm() {
-            form.reset();
-            form.action.value = 'add';
-            form.rowId.value = '';
-            submitButton.textContent = 'Save New Entry';
-            submitButton.classList.remove('bg-green-600', 'hover:bg-green-700');
-            submitButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
-
-            // Reset cabinet buttons
-            hiddenCabinetInput.value = '';
-            cabinetButtonsContainer.querySelectorAll('.cabinet-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'text-white');
-                btn.classList.add('border-gray-300', 'hover:bg-gray-100');
-            });
-
-            // Reset shelf buttons
-            hiddenShelfInput.value = '';
-            shelfButtonsContainer.querySelectorAll('.shelf-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'text-white');
-                btn.classList.add('border-gray-300', 'hover:bg-gray-100');
-            });
-
-            window.scrollTo(0, 0); // Scroll to top
-        }
-
-        /**
-         * Renders the table of entries from the provided data.
-         * @param {Array<Object>} entries - An array of entry objects.
+         * Renders the data into the HTML table.
+         * @param {Array} entries - An array of entry objects from Firestore.
          */
         function renderTable(entries) {
-            // If no entries, show a message
-            if (!entries || entries.length === 0) {
-                tableContainer.innerHTML = `<p class="text-gray-500 text-center p-8">No entries found. Add one using the form!</p>`;
+            // Sort entries: by cabinet, then by shelf, then by item name (case-insensitive)
+            entries.sort((a, b) => {
+                const cabinetA = a.cabinet || '';
+                const cabinetB = b.cabinet || '';
+                const shelfA = a.shelf || '';
+                const shelfB = b.shelf || '';
+                const itemA = (a.item || '').toLowerCase();
+                const itemB = (b.item || '').toLowerCase();
+
+                if (cabinetA < cabinetB) return -1;
+                if (cabinetA > cabinetB) return 1;
+                
+                if (shelfA < shelfB) return -1;
+                if (shelfA > shelfB) return 1;
+
+                if (itemA < itemB) return -1;
+                if (itemA > itemB) return 1;
+                
+                return 0;
+            });
+
+            // Store for searching
+            allEntries = entries; 
+            
+            tableBody.innerHTML = ''; // Clear existing table
+            if (entries.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No supplies found. Add one using the form.</td></tr>`;
                 return;
             }
 
-            // Create table structure
-            let tableHtml = `
-                <table class="min-w-full divide-y divide-gray-200 border">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Cabinet</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Shelf</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Item</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Qty</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Expires</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Notes</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Updated</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Edit</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Delete</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-            `;
+            entries.forEach(entry => {
+                // Format expiration date (if it exists)
+                let expDate = 'N/A';
+                if (entry.earliestExpiration) {
+                    try {
+                        // Firestore dates are often strings, so we re-parse
+                        const date = new Date(entry.earliestExpiration);
+                        // Add 1 day to correct for timezone offset on 'YYYY-MM-DD'
+                        date.setUTCDate(date.getUTCDate() + 1);
+                        expDate = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            timeZone: 'UTC' // Use UTC to avoid timezone shifts
+                        });
+                    } catch (e) {
+                        console.warn("Could not parse date:", entry.earliestExpiration);
+                        expDate = entry.earliestExpiration; // show as-is
+                    }
+                }
 
-            // Create a row for each entry
-            for (const entry of entries) {
-                // Format date fields for display
-                // Replace dashes with slashes for cross-browser date parsing
-                const expDate = entry.earliestExpiration ? new Date(entry.earliestExpiration.replace(/-/g, '\/')).toLocaleDateString() : 'N/A';
-                // Convert Firestore timestamp to JS Date, then to string
-                const updatedDate = entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : 'N/A';
-                
-                // Truncate long notes
-                const shortNotes = entry.notes && entry.notes.length > 30 ? entry.notes.substring(0, 30) + '...' : (entry.notes || '');
+                // Format "last updated" timestamp
+                let updatedDate = 'N/A';
+                if (entry.lastUpdated && entry.lastUpdated.toDate) { // Check if it's a Firestore Timestamp
+                    updatedDate = entry.lastUpdated.toDate().toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
 
-                tableHtml += `
-                    <tr>
-                        <td class="p-3 whitespace-nowrap text-sm text-gray-700">${entry.cabinet || ''}</td>
-                        <td class="p-3 whitespace-nowrap text-sm text-gray-700">${entry.shelf || ''}</td>
-                        <td class="p-3 whitespace-nowrap text-sm font-medium text-gray-900">${entry.item || ''}</td>
-                        <td class="p-3 whitespace-nowrap text-sm text-gray-700">${entry.quantity || '0'}</td>
-                        <td class="p-3 whitespace-nowrap text-sm text-gray-700">${expDate}</td>
-                        <td class="p-3 text-sm text-gray-700" title="${entry.notes || ''}">${shortNotes}</td>
+                const row = `
+                    <tr class="entry-row" data-id="${entry.id}">
+                        <td class="p-3 whitespace-nowrap text-sm font-semibold text-gray-900">${entry.cabinet || ''}</td>
+                        <td class="p-3 whitespace-nowrap text-sm font-semibold text-gray-900">${entry.shelf || ''}</td>
+                        <td class="p-3 whitespace-nowrap text-sm font-semibold text-gray-900">${entry.item || ''}</td>
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500">${entry.quantity || ''}</td>
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500">${expDate}</td>
+                        <td class="p-3 text-sm text-gray-500" style="white-space: pre-wrap; min-width: 150px; word-break: break-word;">${entry.notes || ''}</td>
                         <td class="p-3 whitespace-nowrap text-sm text-gray-500">${updatedDate}</td>
                         <td class="p-3 whitespace-nowrap">
                             <button type="button" class="edit-btn bg-green-500 text-white text-xs py-1 px-3 rounded-md hover:bg-green-600" data-row-id="${entry.id}">
@@ -346,11 +399,9 @@
                         </td>
                     </tr>
                 `;
-            }
+                tableBody.innerHTML += row;
+            });
 
-            tableHtml += `</tbody></table>`;
-            tableContainer.innerHTML = tableHtml;
-            
             // Add event listeners to all new "Edit" buttons
             document.querySelectorAll('.edit-btn').forEach(button => {
                 button.addEventListener('click', handleEditClick);
@@ -363,145 +414,103 @@
         }
 
         /**
-         * Sanitizes a value for use in a CSV file.
-         * Wraps in quotes if it contains commas, newlines, or quotes.
-         * Escapes existing quotes by doubling them.
-         * @param {*} value - The value to sanitize.
-         * @returns {string} The sanitized string.
+         * Main form submission handler.
+         * Decides whether to add a new doc or update an existing one.
+         * @param {Event} e - The form submit event.
          */
-        function sanitizeCSV(value) {
-            const str = String(value || '');
-            if (/[",\n]/.test(str)) {
-                // Wrap in double quotes and escape existing double quotes by doubling them
-                return `"${str.replace(/"/g, '""')}"`;
-            }
-            return str;
-        }
-
-        /**
-         * Handles the click of the "Export" button.
-         * Generates a CSV file from allEntries and triggers a download.
-         */
-        function handleExport() {
-            if (allEntries.length === 0) {
-                showMessage("No data to export.", true);
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (!auth.currentUser) {
+                showMessage('Not authenticated. Please wait and try again.', true);
                 return;
             }
 
-            // 1. Define Headers
-            const headers = [
-                "Cabinet", 
-                "Shelf", 
-                "Item", 
-                "Quantity", 
-                "Earliest Expiration", 
-                "Notes", 
-                "Date/Time Last Updated"
-            ];
+            const formData = new FormData(form);
+            const data = {
+                cabinet: formData.get('cabinet'),
+                shelf: formData.get('shelf'),
+                item: formData.get('item'),
+                quantity: formData.get('quantity') ? Number(formData.get('quantity')) : null,
+                earliestExpiration: formData.get('earliestExpiration') || null,
+                notes: formData.get('notes'),
+                lastUpdated: serverTimestamp() // Let Firestore set the time
+            };
             
-            let csvContent = headers.join(",") + "\n"; // Add header row
+            const docId = editDocIdInput.value;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
 
-            // 2. Create CSV rows
             try {
-                // Use the same sorted list as the table
-                const sortedEntries = [...allEntries].sort((a, b) => {
-                    const aDate = a.updatedAt ? a.updatedAt.toMillis() : 0;
-                    const bDate = b.updatedAt ? b.updatedAt.toMillis() : 0;
-                    return bDate - aDate;
-                });
-
-                sortedEntries.forEach(entry => {
-                    // Get formatted update time
-                    const updatedDate = entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : '';
-
-                    const row = [
-                        entry.cabinet,
-                        entry.shelf,
-                        entry.item,
-                        entry.quantity,
-                        entry.earliestExpiration, // Use the raw YYYY-MM-DD, spreadsheets handle this well
-                        entry.notes,
-                        updatedDate
-                    ];
-
-                    csvContent += row.map(sanitizeCSV).join(",") + "\n";
-                });
+                if (docId) {
+                    // --- UPDATE existing document ---
+                    const docRef = doc(db, COLLECTION_NAME, docId);
+                    await setDoc(docRef, data, { merge: true }); // merge: true preserves other fields if any
+                    showMessage('Entry updated successfully!', false);
+                } else {
+                    // --- ADD new document ---
+                    const collectionRef = collection(db, COLLECTION_NAME);
+                    await addDoc(collectionRef, data);
+                    showMessage('Entry added successfully!', false);
+                }
+                clearForm(); // Clear form on success
             } catch (error) {
-                console.error("Error generating CSV content:", error);
-                showMessage("An error occurred while preparing the export.", true);
-                return;
-            }
-
-            // 3. Create Blob and Download Link
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            
-            if (link.download !== undefined) { // Check for browser support
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", "supplies_export.csv");
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            } else {
-                showMessage("Export feature is not supported in your browser.", true);
+                console.error('Error saving document:', error);
+                showMessage(`Error: ${error.message}`, true);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Entry';
             }
         }
 
         /**
-         * Sets up the real-time listener for Firestore entries.
+         * Clears all form fields and resets button/edit state.
          */
-        function loadEntries() {
-            loadingMessage.style.display = 'block';
-            tableContainer.innerHTML = '';
+        function clearForm() {
+            form.reset();
+            editDocIdInput.value = '';
+            submitButton.textContent = 'Save Entry';
             
-            try {
-                // Create a query for the "supplies" collection
-                const q = query(collection(db, COLLECTION_NAME));
-
-                // Use onSnapshot for real-time updates
-                onSnapshot(q, (querySnapshot) => {
-                    allEntries = [];
-                    querySnapshot.forEach((doc) => {
-                        allEntries.push({ id: doc.id, ...doc.data() });
-                    });
-                    
-                    // Sort entries by last updated time, descending
-                    allEntries.sort((a, b) => {
-                        const aDate = a.updatedAt ? a.updatedAt.toMillis() : 0;
-                        const bDate = b.updatedAt ? b.updatedAt.toMillis() : 0;
-                        return bDate - aDate;
-                    });
-                    
-                    renderTable(allEntries); // Re-render the table with new data
-                    loadingMessage.style.display = 'none'; // Hide loading message
-                }, 
-                (error) => { // Handle errors from onSnapshot
-                    console.error("Error loading entries from Firestore: ", error);
-                    showMessage('Failed to load entries. Check Firestore permissions.', true);
-                    tableContainer.innerHTML = `<p class="text-red-500 text-center p-8">Error loading data: ${error.message}</p>`;
-                    loadingMessage.style.display = 'none';
-                });
-
-            } catch (error) {
-                console.error('Error setting up snapshot listener:', error);
-                showMessage('Failed to set up data listener.', true);
-                tableContainer.innerHTML = `<p class="text-red-500 text-center p-8">Error: ${error.message}</p>`;
-                loadingMessage.style.display = 'none';
-            }
+            // Clear cabinet button selection
+            document.querySelectorAll('#cabinetButtons .btn-choice').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            hiddenCabinetInput.value = '';
+            
+            // Clear shelf button selection
+            document.querySelectorAll('#shelfButtons .btn-choice').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            hiddenShelfInput.value = '';
         }
 
         /**
-         * Handles the click of an "Edit" button.
+         * Handles selecting a button (Cabinet or Shelf).
          * @param {Event} e - The click event.
+         * @param {HTMLElement} container - The button container (e.g., cabinetButtonsContainer).
+         * @param {HTMLInputElement} hiddenInput - The hidden input to update.
+         */
+        function handleButtonChoice(e, container, hiddenInput) {
+            const clickedButton = e.target.closest('.btn-choice');
+            if (!clickedButton) return; // Didn't click a button
+
+            // Remove 'active' from all siblings
+            container.querySelectorAll('.btn-choice').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Add 'active' to the clicked button
+            clickedButton.classList.add('active');
+            
+            // Set the hidden input's value
+            hiddenInput.value = clickedButton.dataset.value;
+        }
+
+        /**
+         * Populates the form with data from an existing entry for editing.
+         * @param {Event} e - The click event from the "Edit" button.
          */
         function handleEditClick(e) {
-            // Get the Firestore document ID from the button's data attribute
             const docId = e.target.dataset.rowId;
-            
-            // Find the entry in our local data
             const entry = allEntries.find(item => item.id === docId);
 
             if (!entry) {
@@ -509,64 +518,35 @@
                 return;
             }
 
-            // Populate the form (using camelCase field names)
-            form.rowId.value = entry.id;
-            form.action.value = 'update';
-
-            // --- MODIFICATION for Cabinet ---
-            // Clear existing active button
-            cabinetButtonsContainer.querySelectorAll('.cabinet-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'text-white');
-                btn.classList.add('border-gray-300', 'hover:bg-gray-100');
-            });
-
-            // Set hidden input and find matching button
-            if (entry.cabinet) {
-                hiddenCabinetInput.value = entry.cabinet;
-                const activeButton = cabinetButtonsContainer.querySelector(`.cabinet-btn[data-value="${entry.cabinet}"]`);
-                if (activeButton) {
-                    activeButton.classList.add('bg-blue-600', 'text-white');
-                    activeButton.classList.remove('border-gray-300', 'hover:bg-gray-100');
-                }
-            } else {
-                hiddenCabinetInput.value = ''; // Clear it if no value
-            }
-            // --- END MODIFICATION ---
-
-            // --- MODIFICATION for Shelf ---
-            // Clear existing active button
-            shelfButtonsContainer.querySelectorAll('.shelf-btn').forEach(btn => {
-                btn.classList.remove('bg-blue-600', 'text-white');
-                btn.classList.add('border-gray-300', 'hover:bg-gray-100');
-            });
-
-            // Set hidden input and find matching button
-            if (entry.shelf) {
-                hiddenShelfInput.value = entry.shelf;
-                const activeButton = shelfButtonsContainer.querySelector(`.shelf-btn[data-value="${entry.shelf}"]`);
-                if (activeButton) {
-                    activeButton.classList.add('bg-blue-600', 'text-white');
-                    activeButton.classList.remove('border-gray-300', 'hover:bg-gray-100');
-                }
-            } else {
-                hiddenShelfInput.value = ''; // Clear it if no value
-            }
-            // --- END MODIFICATION ---
-
+            // Populate form fields
             form.item.value = entry.item || '';
             form.quantity.value = entry.quantity || '';
-            
-            // The value is already in YYYY-MM-DD format, which input[type=date] accepts
             form.earliestExpiration.value = entry.earliestExpiration || '';
-
             form.notes.value = entry.notes || '';
+            editDocIdInput.value = docId; // Set the hidden ID
 
-            // Change submit button to "Update"
+            // Set Cabinet button
+            document.querySelectorAll('#cabinetButtons .btn-choice').forEach(btn => {
+                if (btn.dataset.value === entry.cabinet) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            hiddenCabinetInput.value = entry.cabinet || '';
+            
+            // Set Shelf button
+            document.querySelectorAll('#shelfButtons .btn-choice').forEach(btn => {
+                if (btn.dataset.value === entry.shelf) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            hiddenShelfInput.value = entry.shelf || '';
+
+            // Update button text and scroll to form
             submitButton.textContent = 'Update Entry';
-            submitButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-            submitButton.classList.add('bg-green-600', 'hover:bg-green-700');
-
-            // Scroll to the form
             form.scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -625,113 +605,153 @@
 
         /**
          * Filters the displayed table based on search box input.
+         * This searches the local `allEntries` array.
          */
         function handleSearch() {
-            const query = searchBox.value.toLowerCase();
-            if (query === '') {
+            const query = searchBox.value.toLowerCase().trim();
+            if (!query) {
                 renderTable(allEntries); // Show all if search is empty
                 return;
             }
 
             const filteredEntries = allEntries.filter(entry => {
-                // Search in camelCase fields
-                const cabinet = (entry.cabinet || '').toLowerCase();
-                const shelf = (entry.shelf || '').toLowerCase();
                 const item = (entry.item || '').toLowerCase();
                 const notes = (entry.notes || '').toLowerCase();
-
-                return cabinet.includes(query) || 
-                       shelf.includes(query) || 
-                       item.includes(query) ||
-                       notes.includes(query);
+                const exp = (entry.earliestExpiration || '').toLowerCase();
+                
+                return item.includes(query) || notes.includes(query) || exp.includes(query);
             });
-            
+
             renderTable(filteredEntries);
         }
 
         /**
-         * Handles the form submission (both "add" and "update").
-         * @param {Event} e - The submit event.
+         * Escapes cell data for CSV export.
+         * @param {*} cellData - The data to escape.
+         * @returns {string} - The escaped string.
          */
-        async function handleFormSubmit(e) {
-            e.preventDefault(); // Stop default form submission
-            
-            const action = form.action.value;
-            const docId = form.rowId.value;
-            
-            submitButton.disabled = true;
-            submitButton.textContent = (action === 'add') ? 'Saving...' : 'Updating...';
-
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-
-            // Remove internal-use fields from the data to be saved
-            delete data.rowId;
-            delete data.action;
-
-            // Add the server timestamp for "Date/Time Last Updated"
-            data.updatedAt = serverTimestamp();
-            
-            // Convert quantity to a number
-            if (data.quantity) {
-                data.quantity = parseInt(data.quantity, 10);
+        function escapeCSV(cellData) {
+            if (cellData == null) { // handles null or undefined
+                return '';
             }
-
-            try {
-                if (action === 'add') {
-                    // --- ADD NEW ENTRY ---
-                    const docRef = await addDoc(collection(db, COLLECTION_NAME), data);
-                    showMessage('New entry saved successfully!', false);
-                } else if (action === 'update') {
-                    // --- UPDATE EXISTING ENTRY ---
-                    if (!docId) throw new Error("No document ID found for update.");
-                    const docRef = doc(db, COLLECTION_NAME, docId);
-                    await setDoc(docRef, data); // setDoc overwrites, which is fine as we send all fields
-                    showMessage('Entry updated successfully!', false);
-                }
-                
-                clearForm();
-                // No need to call loadEntries()! 
-                // onSnapshot will automatically detect the change and update the table.
-
-            } catch (error) {
-                console.error('Error submitting form:', error);
-                showMessage(`Error: ${error.message}`, true);
-            } finally {
-                submitButton.disabled = false;
-                // Button text is reset by clearForm()
+            const str = String(cellData);
+            
+            // If the string contains a comma, double quote, or newline,
+            // wrap it in double quotes and escape existing double quotes.
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
             }
+            
+            return str;
         }
         
-        // --- INITIALIZATION ---
-        // This is the main entry point for the app.
-        document.addEventListener('DOMContentLoaded', () => {
+        /**
+         * Exports all entries to a CSV file.
+         */
+        function handleExport() {
+            if (allEntries.length === 0) {
+                showMessage('No data to export.', true);
+                return;
+            }
+
+            const headers = ['Cabinet', 'Shelf', 'Item', 'Quantity', 'EarliestExpiration', 'Notes', 'LastUpdated(UTC)'];
+            
+            // Create CSV content
+            let csvContent = headers.join(',') + '\n';
+            
+            allEntries.forEach(entry => {
+                // Get timestamp as ISO string for consistent format
+                const updated = entry.lastUpdated?.toDate ? entry.lastUpdated.toDate().toISOString() : '';
+                
+                const row = [
+                    escapeCSV(entry.cabinet),
+                    escapeCSV(entry.shelf),
+                    escapeCSV(entry.item),
+                    escapeCSV(entry.quantity),
+                    escapeCSV(entry.earliestExpiration),
+                    escapeCSV(entry.notes),
+                    escapeCSV(updated)
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            
+            // Create and download the file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) { // Feature detection
+                const url = URL.createObjectURL(blob);
+                const date = new Date().toISOString().split('T')[0];
+                link.setAttribute('href', url);
+                link.setAttribute('download', `supplies_export_${date}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        /**
+         * --- APP INITIALIZATION ---
+         * Runs when the script loads.
+         */
+        function initApp() {
             try {
-                // 1. Initialize Firebase
+                // Initialize Firebase
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('debug'); // Optional: for more detailed console logs
+                
+                // Enable verbose logging for Firestore
+                // setLogLevel('debug');
 
-                // 2. Set up Auth Listener
-                onAuthStateChanged(auth, (user) => {
+                loadingMessage.style.display = 'block';
+
+                // Listen for authentication state changes
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // User is signed in anonymously.
-                        console.log("User authenticated:", user.uid);
-                        // 3. Load entries now that we are authenticated
-                        loadEntries();
-                    } else {
-                        // User is signed out.
-                        console.log("No user. Signing in anonymously...");
-                        signInAnonymously(auth).catch((error) => {
-                            console.error("Anonymous sign-in failed:", error);
-                            showMessage("Authentication failed. Please refresh.", true);
-                            loadingMessage.textContent = "Authentication failed. Please refresh the page.";
+                        // User is signed in (anonymously)
+                        currentUserId = user.uid;
+                        loadingMessage.textContent = 'Authenticated. Loading entries...';
+                        
+                        // --- Attach Firestore listener ---
+                        // Now that we're authenticated, we can listen for data.
+                        const collectionRef = collection(db, COLLECTION_NAME);
+                        
+                        onSnapshot(collectionRef, (querySnapshot) => {
+                            const entries = [];
+                            querySnapshot.forEach((doc) => {
+                                entries.push({ id: doc.id, ...doc.data() });
+                            });
+                            
+                            renderTable(entries); // Render the live data
+                            
+                            // Hide loading indicators
+                            loadingIndicator.style.display = 'none';
+                            loadingMessage.style.display = 'none';
+                            
+                        }, (error) => {
+                            console.error('Error getting documents:', error);
+                            loadingMessage.textContent = `Error loading data: ${error.message}`;
+                            loadingMessage.className = 'text-red-500 text-center p-8';
                         });
+
+                    } else {
+                        // User is signed out. Try to sign in.
+                        currentUserId = null;
+                        loadingMessage.textContent = 'Authenticating...';
+                        try {
+                            await signInAnonymously(auth);
+                            // The onAuthStateChanged listener will fire again
+                            // once signed in, triggering the data load.
+                        } catch (error) {
+                            console.error('Error signing in anonymously:', error);
+                            loadingMessage.textContent = `Authentication Failed: ${error.message}`;
+                            loadingMessage.className = 'text-red-500 text-center p-8';
+                        }
                     }
                 });
 
-                // 4. Attach form/button listeners
+                // --- Add Form and Button Event Listeners ---
                 form.addEventListener('submit', handleFormSubmit);
                 clearButton.addEventListener('click', clearForm);
                 searchBox.addEventListener('input', handleSearch);
@@ -743,54 +763,27 @@
 
                 // Handle Cabinet Button Clicks
                 cabinetButtonsContainer.addEventListener('click', (e) => {
-                    const targetButton = e.target.closest('.cabinet-btn');
-                    if (targetButton) {
-                        const selectedValue = targetButton.dataset.value;
-                        
-                        // Set the hidden input's value
-                        hiddenCabinetInput.value = selectedValue;
-
-                        // Reset styles on all buttons
-                        cabinetButtonsContainer.querySelectorAll('.cabinet-btn').forEach(btn => {
-                            btn.classList.remove('bg-blue-600', 'text-white');
-                            btn.classList.add('border-gray-300', 'hover:bg-gray-100');
-                        });
-
-                        // Apply active style to clicked button
-                        targetButton.classList.add('bg-blue-600', 'text-white');
-                        targetButton.classList.remove('border-gray-300', 'hover:bg-gray-100');
-                    }
+                    handleButtonChoice(e, cabinetButtonsContainer, hiddenCabinetInput);
                 });
 
                 // Handle Shelf Button Clicks
                 shelfButtonsContainer.addEventListener('click', (e) => {
-                    const targetButton = e.target.closest('.shelf-btn');
-                    if (targetButton) {
-                        const selectedValue = targetButton.dataset.value;
-                        
-                        // Set the hidden input's value
-                        hiddenShelfInput.value = selectedValue;
-
-                        // Reset styles on all buttons
-                        shelfButtonsContainer.querySelectorAll('.shelf-btn').forEach(btn => {
-                            btn.classList.remove('bg-blue-600', 'text-white');
-                            btn.classList.add('border-gray-300', 'hover:bg-gray-1F00');
-                        });
-
-                        // Apply active style to clicked button
-                        targetButton.classList.add('bg-blue-600', 'text-white');
-                        targetButton.classList.remove('border-gray-300', 'hover:bg-gray-100');
-                    }
+                    handleButtonChoice(e, shelfButtonsContainer, hiddenShelfInput);
+Date
                 });
 
-            } catch (e) {
-                console.error("Error initializing Firebase:", e);
-                showMessage("Error initializing application. See console for details.", true);
-                loadingMessage.textContent = "Error initializing. Check console.";
+            } catch (error) {
+                console.error('Error initializing app:', error);
+                loadingIndicator.style.display = 'none';
+                loadingMessage.textContent = `Critical Error: ${error.message}`;
+                loadingMessage.style.display = 'block';
+                loadingMessage.className = 'text-red-500 text-center p-8';
             }
-        });
+        }
+
+        // --- Start the application ---
+        initApp();
 
     </script>
 </body>
-
 </html>
