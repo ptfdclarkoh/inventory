@@ -22,6 +22,7 @@
     <!-- 
       Specifies the app icon (180x180 is recommended for modern iPads).
       Using a placeholder. You can replace this with your own icon.
+      Using a placeholder for now.
     -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <!-- === End App Settings === -->
@@ -63,8 +64,7 @@
 
         /* Custom styles for date and time inputs to ensure proper sizing */
         input[type="date"], input[type="datetime-local"] {
-            width: 90%; /* Reverts to the browser's default sizing */
-            max-width: 100%; /* Ensures it doesn't exceed its container */
+            width: 100%; /* Use full width */
             box-sizing: border-box;
         }
 
@@ -78,14 +78,15 @@
 <body class="antialiased text-gray-900">
 
     <!-- Main Container -->
-    <!-- Removed max-w-6xl and mx-auto to use full width -->
-    <div class="container p-4 sm:p-6 lg:p-8">
+    <!-- Removed 'container' class to allow full width -->
+    <div class="p-4 sm:p-6 lg:p-8">
 
         <!-- Grid Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Left Column: Form -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-screen overflow-y-auto">
+            <!-- Set explicit heights for scrolling on mobile and desktop -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-[90vh] lg:h-[calc(100vh-4rem)] overflow-y-auto">
                 
                 <!-- Sticky Form Header -->
                 <div id="formHeader" class="border-b pb-4 mb-6">
@@ -162,7 +163,8 @@
             </div>
 
             <!-- Right Column: Data Table -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg h-screen overflow-y-auto">
+            <!-- Set explicit heights for scrolling on mobile and desktop -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg h-[90vh] lg:h-[calc(100vh-4rem)] overflow-y-auto">
                 <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Existing Supplies</h2>
 
                 <!-- Search and Export -->
@@ -238,7 +240,7 @@
     <script type="module">
         // Import functions from the Firebase SDK
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
             doc, 
@@ -250,24 +252,27 @@
             serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- PASTE YOUR FIREBASE CONFIG HERE ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyBTjbo2ndQYowrvmcDxeXfvNb_E3nSijH8",
-          authDomain: "ems-inventory.firebaseapp.com",
-          projectId: "ems-inventory",
-          storageBucket: "ems-inventory.firebasestorage.app",
-          messagingSenderId: "1076236960850",
-          appId: "1:1076236960850:web:07cc24cd638ef4a8298b8b",
-          measurementId: "G-BFFXWP4G42"
-        };
-        // ----------------------------------------
+        // --- Firebase Config ---
+        // These variables are expected to be injected by the environment
+        // Do not edit them directly here
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "YOUR_FALLBACK_API_KEY", authDomain: "YOUR_FALLBACK_AUTH_DOMAIN", projectId: "YOUR_FALLBACK_PROJECT_ID" }; // Fallback config
+            
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' 
+            ? __initial_auth_token 
+            : null;
+            
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        const COLLECTION_NAME = 'supplies';
+        // Use a dynamic collection path including the appId
+        const COLLECTION_NAME = `artifacts/${appId}/public/data/supplies`;
 
         // --- Global Variables ---
         let db;
         let auth;
         let currentUserId; // To hold the authenticated user's ID
+        let entriesListener = null; // To hold the onSnapshot unsubscribe function
         
         // --- Form Elements ---
         const form = document.getElementById('inventoryForm');
@@ -339,13 +344,21 @@
             // Store for searching
             allEntries = entries; 
             
+            // Filter based on search box *before* rendering
+            const query = searchBox.value.toLowerCase().trim();
+            const entriesToRender = query ? filterEntries(entries, query) : entries;
+            
             tableBody.innerHTML = ''; // Clear existing table
-            if (entries.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No supplies found. Add one using the form.</td></tr>`;
+            if (entriesToRender.length === 0) {
+                if (query && entries.length > 0) {
+                    tableBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No items match your search.</td></tr>`;
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No supplies found. Add one using the form.</td></tr>`;
+                }
                 return;
             }
 
-            entries.forEach(entry => {
+            entriesToRender.forEach(entry => {
                 // Format expiration date (if it exists)
                 let expDate = 'N/A';
                 if (entry.earliestExpiration) {
@@ -443,11 +456,13 @@
             try {
                 if (docId) {
                     // --- UPDATE existing document ---
+                    // Use the full path including the collection name
                     const docRef = doc(db, COLLECTION_NAME, docId);
                     await setDoc(docRef, data, { merge: true }); // merge: true preserves other fields if any
                     showMessage('Entry updated successfully!', false);
                 } else {
                     // --- ADD new document ---
+                    // Use the full path including the collection name
                     const collectionRef = collection(db, COLLECTION_NAME);
                     await addDoc(collectionRef, data);
                     showMessage('Entry added successfully!', false);
@@ -587,7 +602,7 @@
             if (!docIdToDelete) return;
 
             try {
-                // Get a reference to the document
+                // Get a reference to the document using the full path
                 const docRef = doc(db, COLLECTION_NAME, docIdToDelete);
                 // Delete the document
                 await deleteDoc(docRef);
@@ -604,25 +619,29 @@
         }
 
         /**
-         * Filters the displayed table based on search box input.
-         * This searches the local `allEntries` array.
+         * Filters the provided entries list based on the query.
+         * @param {Array} entries - The list of entries to filter.
+         * @param {string} query - The search query.
+         * @returns {Array} - The filtered list of entries.
          */
-        function handleSearch() {
-            const query = searchBox.value.toLowerCase().trim();
-            if (!query) {
-                renderTable(allEntries); // Show all if search is empty
-                return;
-            }
-
-            const filteredEntries = allEntries.filter(entry => {
+        function filterEntries(entries, query) {
+             return entries.filter(entry => {
                 const item = (entry.item || '').toLowerCase();
                 const notes = (entry.notes || '').toLowerCase();
                 const exp = (entry.earliestExpiration || '').toLowerCase();
                 
                 return item.includes(query) || notes.includes(query) || exp.includes(query);
             });
-
-            renderTable(filteredEntries);
+        }
+        
+        /**
+         * Filters the displayed table based on search box input.
+         * This searches the local `allEntries` array and re-renders.
+         */
+        function handleSearch() {
+            // Re-render the table with the current search query
+            // renderTable will use allEntries and apply the filter
+            renderTable(allEntries);
         }
 
         /**
@@ -649,8 +668,12 @@
          * Exports all entries to a CSV file.
          */
         function handleExport() {
-            if (allEntries.length === 0) {
-                showMessage('No data to export.', true);
+            // Use allEntries, but apply the current search filter first
+            const query = searchBox.value.toLowerCase().trim();
+            const entriesToExport = query ? filterEntries(allEntries, query) : allEntries;
+
+            if (entriesToExport.length === 0) {
+                showMessage('No data to export (based on current filter).', true);
                 return;
             }
 
@@ -659,7 +682,7 @@
             // Create CSV content
             let csvContent = headers.join(',') + '\n';
             
-            allEntries.forEach(entry => {
+            entriesToExport.forEach(entry => {
                 // Get timestamp as ISO string for consistent format
                 const updated = entry.lastUpdated?.toDate ? entry.lastUpdated.toDate().toISOString() : '';
                 
@@ -681,13 +704,45 @@
             if (link.download !== undefined) { // Feature detection
                 const url = URL.createObjectURL(blob);
                 const date = new Date().toISOString().split('T')[0];
+                const filename = query ? `supplies_export_${date}_filtered.csv` : `supplies_export_${date}.csv`;
                 link.setAttribute('href', url);
-                link.setAttribute('download', `supplies_export_${date}.csv`);
+                link.setAttribute('download', filename);
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             }
+        }
+        
+        /**
+         * Attaches the Firestore listener to the collection.
+         */
+        function attachDataListener() {
+            // Detach any existing listener to avoid duplicates
+            if (entriesListener) {
+                entriesListener();
+            }
+            
+            // Now that we're authenticated, we can listen for data.
+            const collectionRef = collection(db, COLLECTION_NAME);
+            
+            entriesListener = onSnapshot(collectionRef, (querySnapshot) => {
+                const entries = [];
+                querySnapshot.forEach((doc) => {
+                    entries.push({ id: doc.id, ...doc.data() });
+                });
+                
+                renderTable(entries); // Render the live data
+                
+                // Hide loading indicators
+                loadingIndicator.style.display = 'none';
+                loadingMessage.style.display = 'none';
+                
+            }, (error) => {
+                console.error('Error getting documents:', error);
+                loadingMessage.textContent = `Error loading data: ${error.message}`;
+                loadingMessage.className = 'text-red-500 text-center p-8';
+            });
         }
 
         /**
@@ -702,49 +757,40 @@
                 auth = getAuth(app);
                 
                 // Enable verbose logging for Firestore
-                // setLogLevel('debug');
+                setLogLevel('debug'); // Added for debugging
 
                 loadingMessage.style.display = 'block';
 
                 // Listen for authentication state changes
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // User is signed in (anonymously)
+                        // User is signed in
                         currentUserId = user.uid;
+                        console.log("User authenticated with UID:", currentUserId); // Debug log
                         loadingMessage.textContent = 'Authenticated. Loading entries...';
                         
                         // --- Attach Firestore listener ---
-                        // Now that we're authenticated, we can listen for data.
-                        const collectionRef = collection(db, COLLECTION_NAME);
-                        
-                        onSnapshot(collectionRef, (querySnapshot) => {
-                            const entries = [];
-                            querySnapshot.forEach((doc) => {
-                                entries.push({ id: doc.id, ...doc.data() });
-                            });
-                            
-                            renderTable(entries); // Render the live data
-                            
-                            // Hide loading indicators
-                            loadingIndicator.style.display = 'none';
-                            loadingMessage.style.display = 'none';
-                            
-                        }, (error) => {
-                            console.error('Error getting documents:', error);
-                            loadingMessage.textContent = `Error loading data: ${error.message}`;
-                            loadingMessage.className = 'text-red-500 text-center p-8';
-                        });
+                        attachDataListener();
 
                     } else {
                         // User is signed out. Try to sign in.
                         currentUserId = null;
                         loadingMessage.textContent = 'Authenticating...';
+                        console.log("No user. Attempting sign-in..."); // Debug log
                         try {
-                            await signInAnonymously(auth);
+                            if (initialAuthToken) {
+                                console.log("Signing in with custom token..."); // Debug log
+                                // Use the injected token if available
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                console.log("Signing in anonymously..."); // Debug log
+                                // Fallback to anonymous sign-in
+                                await signInAnonymously(auth);
+                            }
                             // The onAuthStateChanged listener will fire again
                             // once signed in, triggering the data load.
                         } catch (error) {
-                            console.error('Error signing in anonymously:', error);
+                            console.error('Error signing in:', error);
                             loadingMessage.textContent = `Authentication Failed: ${error.message}`;
                             loadingMessage.className = 'text-red-500 text-center p-8';
                         }
@@ -769,7 +815,6 @@
                 // Handle Shelf Button Clicks
                 shelfButtonsContainer.addEventListener('click', (e) => {
                     handleButtonChoice(e, shelfButtonsContainer, hiddenShelfInput);
-Date
                 });
 
             } catch (error) {
