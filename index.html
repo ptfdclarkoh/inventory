@@ -83,11 +83,13 @@
     <div class="p-4 sm:p-6 lg:p-8">
 
         <!-- Grid Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- CHANGED: from lg:grid-cols-3 to lg:grid-cols-4 -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
             <!-- Left Column: Form -->
-            <!-- Set explicit heights for scrolling on mobile and desktop -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-[90vh] lg:h-[calc(100vh-4rem)] overflow-y-auto">
+            <!-- CHANGED: from lg:col-span-1 (of 3) to lg:col-span-1 (of 4) -->
+            <!-- CHANGED: Removed fixed height on lg screens. Now h-auto, so page will scroll -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-[90vh] overflow-y-auto lg:h-auto lg:overflow-y-visible">
                 
                 <!-- Sticky Form Header -->
                 <div id="formHeader" class="border-b pb-4 mb-6">
@@ -165,7 +167,8 @@
 
             <!-- Right Column: Data Table -->
             <!-- Set explicit heights for scrolling on mobile and desktop -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg h-[90vh] lg:h-[calc(100vh-4rem)] overflow-y-auto">
+            <!-- CHANGED: from lg:col-span-2 (of 3) to lg:col-span-3 (of 4) -->
+            <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg h-[90vh] lg:h-[calc(100vh-4rem)] overflow-y-auto">
                 <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Existing Supplies</h2>
 
                 <!-- Search and Export -->
