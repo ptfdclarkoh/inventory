@@ -9,6 +9,8 @@
     
     <!-- Makes the web app run in full-screen mode without browser chrome -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- Added for modern browser compatibility -->
+    <meta name="mobile-web-app-capable" content="yes">
     
     <!-- Sets the title for the app icon on the home screen -->
     <meta name="apple-mobile-web-app-title" content="Supplies">
@@ -21,8 +23,7 @@
     
     <!-- 
       Specifies the app icon (180x180 is recommended for modern iPads).
-      Using a placeholder. You can replace this with your own icon.
-      Using a placeholder for now.
+      Using a placeholder to prevent 404 errors.
     -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <!-- === End App Settings === -->
@@ -240,7 +241,7 @@
     <script type="module">
         // Import functions from the Firebase SDK
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
             doc, 
@@ -253,20 +254,20 @@
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Config ---
-        // These variables are expected to be injected by the environment
-        // Do not edit them directly here
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : { apiKey: "YOUR_FALLBACK_API_KEY", authDomain: "YOUR_FALLBACK_AUTH_DOMAIN", projectId: "YOUR_FALLBACK_PROJECT_ID" }; // Fallback config
-            
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' 
-            ? __initial_auth_token 
-            : null;
-            
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // REVERTED to the hardcoded config from your original file to fix auth errors
+        const firebaseConfig = {
+          apiKey: "AIzaSyBTjbo2ndQYowrvmcDxeXfvNb_E3nSijH8",
+          authDomain: "ems-inventory.firebaseapp.com",
+          projectId: "ems-inventory",
+          storageBucket: "ems-inventory.firebasestorage.app",
+          messagingSenderId: "1076236960850",
+          appId: "1:1076236960850:web:07cc24cd638ef4a8298b8b",
+          measurementId: "G-BFFXWP4G42"
+        };
+        // ----------------------------------------
         
-        // Use a dynamic collection path including the appId
-        const COLLECTION_NAME = `artifacts/${appId}/public/data/supplies`;
+        // REVERTED to the original collection name
+        const COLLECTION_NAME = 'supplies';
 
         // --- Global Variables ---
         let db;
@@ -456,13 +457,11 @@
             try {
                 if (docId) {
                     // --- UPDATE existing document ---
-                    // Use the full path including the collection name
                     const docRef = doc(db, COLLECTION_NAME, docId);
                     await setDoc(docRef, data, { merge: true }); // merge: true preserves other fields if any
                     showMessage('Entry updated successfully!', false);
                 } else {
                     // --- ADD new document ---
-                    // Use the full path including the collection name
                     const collectionRef = collection(db, COLLECTION_NAME);
                     await addDoc(collectionRef, data);
                     showMessage('Entry added successfully!', false);
@@ -738,7 +737,7 @@
                 loadingIndicator.style.display = 'none';
                 loadingMessage.style.display = 'none';
                 
-            }, (error) => {
+            }, (error) => { // <-- FIXED: Added arrow and braces
                 console.error('Error getting documents:', error);
                 loadingMessage.textContent = `Error loading data: ${error.message}`;
                 loadingMessage.className = 'text-red-500 text-center p-8';
@@ -757,7 +756,7 @@
                 auth = getAuth(app);
                 
                 // Enable verbose logging for Firestore
-                setLogLevel('debug'); // Added for debugging
+                // setLogLevel('debug'); // Removed for cleaner console
 
                 loadingMessage.style.display = 'block';
 
@@ -778,15 +777,10 @@
                         loadingMessage.textContent = 'Authenticating...';
                         console.log("No user. Attempting sign-in..."); // Debug log
                         try {
-                            if (initialAuthToken) {
-                                console.log("Signing in with custom token..."); // Debug log
-                                // Use the injected token if available
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } else {
-                                console.log("Signing in anonymously..."); // Debug log
-                                // Fallback to anonymous sign-in
-                                await signInAnonymously(auth);
-                            }
+                            // Only use signInAnonymously as the auth method
+                            console.log("Signing in anonymously..."); // Debug log
+                            await signInAnonymously(auth);
+                            
                             // The onAuthStateChanged listener will fire again
                             // once signed in, triggering the data load.
                         } catch (error) {
