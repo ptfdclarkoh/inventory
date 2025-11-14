@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Viewport for mobile-friendly, app-like feel -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
+    <title>PTFD EMS Supply Form</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+        }
+        /* Simple loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        /* Active state for button choices */
+        .btn-choice.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-900">
+
+    <!-- Navigation Bar -->
+    <!--
+    <nav class="bg-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="flex justify-center space-x-4">
+                <a href="index.html" class="text-gray-500 hover:text-blue-600 px-3 py-4 font-medium">Log Inventory</a>
+                <a href="log_out.html" class="text-blue-600 border-b-2 border-blue-600 px-3 py-4 font-medium" aria-current="page">Log Out Item</a>
+                <a href="transactions.html" class="text-gray-500 hover:text-blue-600 px-3 py-4 font-medium">View Transactions</a>
+            </div>
+        </div>
+    </nav>
+    -->
+
+    <!-- Main Container -->
+    <div class="max-w-lg mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="bg-white p-6 rounded-xl shadow-lg">
+            
+            <!-- Header -->
+            <div class="border-b pb-4 mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">Log Out EMS Supply</h2>
+                <p class="text-gray-500">Log an item being taken from EMS Inventory.</p>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="flex flex-col items-center justify-center p-8">
+                <div class="spinner"></div>
+                <p class="text-gray-500 mt-4">Loading items...</p>
+            </div>
+
+            <!-- Log Out Form -->
+            <!-- Hidden by default, shown when items are loaded -->
+            <form id="logOutForm" class="space-y-6" style="display: none;">
+                
+                <!-- Searchable Item Dropdown -->
+                <div>
+                    <label for="item" class="block text-sm font-medium text-gray-700">Item (Searchable)</label>
+                    <!-- 
+                      Using an <input> with a <datalist> provides a searchable dropdown.
+                      The user can type to filter the list.
+                    -->
+                    <input list="itemList" name="item" id="item" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Type or select an item">
+                    <datalist id="itemList">
+                        <!-- <option value="Item Name" data-id="doc-id-123" data-quantity="10"></option> -->
+                        <!-- Options will be injected here by JavaScript -->
+                    </datalist>
+                    <p id="item-details" class="text-sm text-gray-500 mt-1"></p>
+                </div>
+
+                <!-- Quantity to Take -->
+                <div>
+                    <label for="quantityTaken" class="block text-sm font-medium text-gray-700">Quantity Taken</label>
+                    <input type="number" name="quantityTaken" id="quantityTaken" min="1" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- Person's Name -->
+                <div>
+                    <label for="person" class="block text-sm font-medium text-gray-700">Member Name</label>
+                    <!-- Changed from <input> to <select> -->
+                    <select name="person" id="person" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white">
+                        <option value="" disabled selected>Select a member</option>
+                        <!-- Member names will be injected here by JavaScript -->
+                    </select>
+                </div>
+
+                <!-- Reason Buttons -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+                    <div id="reasonButtons" class="grid grid-cols-3 gap-2">
+                        <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="Use">Use</button>
+                        <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="Expiration">Expiration</button>
+                        <button type="button" class="btn-choice border border-gray-300 py-3 rounded-lg text-lg font-semibold text-gray-700 hover:bg-gray-100" data-value="Training">Training</button>
+                    </div>
+                    <input type="hidden" id="reason" name="reason" required>
+                </div>
+
+                <!-- Form Buttons -->
+                <div class="flex flex-col gap-4">
+                    <button type="submit" id="submitButton" class="w-full justify-center py-3 px-6 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Log Out Item
+                    </button>
+                </div>
+            </form>
+
+            <!-- Feedback Message Area -->
+            <div id="message" class="mt-6 p-4 rounded-lg text-center" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import functions from the Firebase SDK
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            addDoc, 
+            updateDoc,
+            collection,
+            getDocs,
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Config (Copied from your index.html) ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyBTjbo2ndQYowrvmcDxeXfvNb_E3nSijH8",
+          authDomain: "ems-inventory.firebaseapp.com",
+          projectId: "ems-inventory",
+          storageBucket: "ems-inventory.firebasestorage.app",
+          messagingSenderId: "1076236960850",
+          appId: "1:1076236960850:web:07cc24cd638ef4a8298b8b",
+          measurementId: "G-BFFXWP4G42"
+        };
+        
+        // --- Firestore Collection Names ---
+        const SUPPLIES_COLLECTION = 'supplies';
+        const TRANSACTIONS_COLLECTION = 'transactions';
+
+        // --- Global Variables ---
+        let db;
+        let auth;
+        let currentUserId;
+        let availableItems = []; // To store item data
+
+        // --- Form Elements ---
+        const form = document.getElementById('logOutForm');
+        const message = document.getElementById('message');
+        const submitButton = document.getElementById('submitButton');
+        const itemInput = document.getElementById('item');
+        const itemDetails = document.getElementById('item-details');
+        const quantityTakenInput = document.getElementById('quantityTaken');
+        const dataList = document.getElementById('itemList');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const reasonButtonsContainer = document.getElementById('reasonButtons');
+        const hiddenReasonInput = document.getElementById('reason');
+
+        /**
+         * Displays a feedback message to the user.
+         */
+        function showMessage(msg, isError = false) {
+            message.textContent = msg;
+            message.className = `mt-6 p-4 rounded-lg text-center ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
+            message.style.display = 'block';
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 3000);
+        }
+
+        /**
+         * Fetches items from Firestore and populates the datalist.
+         */
+        async function loadItems() {
+            try {
+                const collectionRef = collection(db, SUPPLIES_COLLECTION);
+                const querySnapshot = await getDocs(collectionRef);
+                
+                availableItems = []; // Clear local cache
+                dataList.innerHTML = ''; // Clear datalist
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // Only add items that have a quantity
+                    if (data.quantity && data.quantity > 0) {
+                        const itemData = {
+                            id: doc.id,
+                            name: data.item,
+                            quantity: data.quantity
+                        };
+                        availableItems.push(itemData);
+                        
+                        // Add to datalist
+                        const option = document.createElement('option');
+                        option.value = data.item;
+                        // Store ID and quantity in the option's dataset for later retrieval
+                        option.dataset.id = doc.id;
+                        option.dataset.quantity = data.quantity;
+                        dataList.appendChild(option);
+                    }
+                });
+
+                // Show form, hide loading
+                loadingIndicator.style.display = 'none';
+                form.style.display = 'block';
+
+            } catch (error) {
+                console.error("Error loading items: ", error);
+                showMessage("Error loading items: " + error.message, true);
+                loadingIndicator.textContent = 'Error loading items.';
+                // Re-throw error for Promise.all
+                throw error;
+            }
+        }
+
+        /**
+         * Fetches member names from Google Sheet CSV.
+         */
+        async function loadMembers() {
+            const memberSelect = document.getElementById('person');
+            // Set default placeholder
+            memberSelect.innerHTML = '<option value="" disabled selected>Select a member</option>'; 
+            
+            const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRc1IdR2_NZQjZZUxmHnCcaNpJCpiokXvQ1zHgRmWXkdXBydgZB15-eABGwb7eW4IIRz_m5nWWyXOxI/pub?gid=0&single=true&output=csv";
+            
+            try {
+                const response = await fetch(sheetUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch member list: ${response.statusText}`);
+                }
+                const csvText = await response.text();
+                const lines = csvText.split('\n');
+                
+                // Start at 1 to skip header ("Member List")
+                for (let i = 1; i < lines.length; i++) {
+                    let name = lines[i].trim(); // trim() removes extra whitespace/newlines
+                    
+                    // NEW: Check for and remove surrounding quotes
+                    if (name.startsWith('"') && name.endsWith('"')) {
+                        name = name.substring(1, name.length - 1);
+                    }
+
+                    if (name) { // Only add if the line isn't empty
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        memberSelect.appendChild(option);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading members: ", error);
+                showMessage("Error loading member list: " + error.message, true);
+                // Re-throw error for Promise.all
+                throw error; 
+            }
+        }
+
+
+        /**
+         * Finds the selected item's data from the datalist.
+         */
+        function getSelectedItemData(itemName) {
+            const options = dataList.querySelectorAll('option');
+            for (let option of options) {
+                if (option.value === itemName) {
+                    return {
+                        id: option.dataset.id,
+                        quantity: parseInt(option.dataset.quantity, 10)
+                    };
+                }
+            }
+            return null; // Item not found
+        }
+        
+        /**
+         * Handles selecting a button (e.g., Reason).
+         * @param {Event} e - The click event.
+         * @param {HTMLElement} container - The button container.
+         * @param {HTMLInputElement} hiddenInput - The hidden input to update.
+         */
+        function handleButtonChoice(e, container, hiddenInput) {
+            const clickedButton = e.target.closest('.btn-choice');
+            if (!clickedButton) return; // Didn't click a button
+
+            // Remove 'active' from all siblings
+            container.querySelectorAll('.btn-choice').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Add 'active' to the clicked button
+            clickedButton.classList.add('active');
+            
+            // Set the hidden input's value
+            hiddenInput.value = clickedButton.dataset.value;
+        }
+
+        /**
+         * Shows the current stock when an item is selected.
+         */
+        function handleItemSelection() {
+            const selectedItemName = itemInput.value;
+            const itemData = getSelectedItemData(selectedItemName);
+            
+            if (itemData) {
+                itemDetails.textContent = `Current stock: ${itemData.quantity}`;
+                // Set max for quantity input
+                quantityTakenInput.max = itemData.quantity;
+            } else {
+                itemDetails.textContent = '';
+                quantityTakenInput.max = null;
+            }
+        }
+
+        /**
+         * Main form submission handler.
+         */
+        async function handleLogOut(e) {
+            e.preventDefault();
+            if (!auth.currentUser) {
+                showMessage('Not authenticated. Please wait and try again.', true);
+                return;
+            }
+
+            const formData = new FormData(form);
+            const itemName = formData.get('item');
+            const quantityTaken = parseInt(formData.get('quantityTaken'), 10);
+            const person = formData.get('person');
+            const reason = formData.get('reason');
+
+            // 1. Find the selected item from our datalist
+            const selectedItem = getSelectedItemData(itemName);
+
+            // 2. Validation
+            if (!selectedItem) {
+                showMessage('Invalid item selected. Please choose from the list.', true);
+                return;
+            }
+            if (isNaN(quantityTaken) || quantityTaken <= 0) {
+                showMessage('Please enter a valid quantity.', true);
+                return;
+            }
+            if (quantityTaken > selectedItem.quantity) {
+                showMessage(`Cannot take ${quantityTaken}. Only ${selectedItem.quantity} available.`, true);
+                return;
+            }
+            if (!reason) {
+                showMessage('Please select a reason.', true);
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+
+            try {
+                // 3. Calculate new quantity
+                const newQuantity = selectedItem.quantity - quantityTaken;
+
+                // 4. Update the item in the 'supplies' collection
+                const itemDocRef = doc(db, SUPPLIES_COLLECTION, selectedItem.id);
+                await updateDoc(itemDocRef, {
+                    quantity: newQuantity,
+                    lastUpdated: serverTimestamp()
+                });
+
+                // 5. Add a record to the 'transactions' collection
+                const transactionCollectionRef = collection(db, TRANSACTIONS_COLLECTION);
+                await addDoc(transactionCollectionRef, {
+                    item: itemName,
+                    quantityTaken: quantityTaken,
+                    person: person,
+                    reason: reason,
+                    loggedAt: serverTimestamp() // Let Firestore set the time
+                });
+
+                showMessage('Item logged out successfully!', false);
+                form.reset(); // Clear the form
+                itemDetails.textContent = ''; // Clear item details
+                
+                // Clear reason button selection
+                reasonButtonsContainer.querySelectorAll('.btn-choice').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                hiddenReasonInput.value = '';
+
+                // 6. Refresh the item list to show new quantity
+                await loadItems();
+
+            } catch (error) {
+                console.error('Error logging out item:', error);
+                showMessage(`Error: ${error.message}`, true);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Log Out Item';
+            }
+        }
+
+        /**
+         * --- APP INITIALIZATION ---
+         */
+        function initApp() {
+            try {
+                // Initialize Firebase
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // setLogLevel('debug');
+
+                // Listen for authentication state changes
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        // User is signed in
+                        currentUserId = user.uid;
+                        console.log("User authenticated:", currentUserId);
+                        
+                        try {
+                            // Load both items and members in parallel
+                            await Promise.all([ loadItems(), loadMembers() ]);
+                            
+                            // Both are loaded, now show the form
+                            loadingIndicator.style.display = 'none';
+                            form.style.display = 'block';
+
+                        } catch (error) {
+                            // If either loadItems or loadMembers fails
+                            console.error("Error loading page data:", error);
+                            loadingIndicator.textContent = 'Error loading page data. Please refresh.';
+                        }
+
+                    } else {
+                        // User is signed out. Try to sign in.
+                        currentUserId = null;
+                        console.log("No user. Attempting sign-in...");
+                        try {
+                            await signInAnonymously(auth);
+                            // The onAuthStateChanged listener will fire again
+                            // once signed in, triggering loadItems().
+                        } catch (error) {
+                            console.error('Error signing in:', error);
+                            loadingIndicator.textContent = `Authentication Failed: ${error.message}`;
+                        }
+                    }
+                });
+
+                // --- Add Form and Input Event Listeners ---
+                form.addEventListener('submit', handleLogOut);
+                // Update item details when user selects from datalist
+                itemInput.addEventListener('input', handleItemSelection);
+
+                // Handle Reason Button Clicks
+                reasonButtonsContainer.addEventListener('click', (e) => {
+                    handleButtonChoice(e, reasonButtonsContainer, hiddenReasonInput);
+                });
+
+            } catch (error) {
+                console.error('Error initializing app:', error);
+                loadingIndicator.style.display = 'none';
+                showMessage(`Critical Error: ${error.message}`, true);
+            }
+        }
+
+        // --- Start the application ---
+        initApp();
+    </script>
+</body>
+</html>

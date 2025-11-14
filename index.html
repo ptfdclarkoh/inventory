@@ -28,7 +28,7 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <!-- === End App Settings === -->
     
-    <title>Supplies Inventory Log (Firestore)</title>
+    <title>PTFD Supplies Inventory</title>
     <!-- 1. Load Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -44,6 +44,9 @@
             top: 0;
             background-color: white;
             z-index: 10;
+            /* Add padding to match the form's padding */
+            padding-top: 1.5rem; /* p-6 */
+            margin-top: -1.5rem; /* Pull it up to cover original padding */
         }
 
         /* Active state for button choices */
@@ -79,9 +82,22 @@
 </head>
 <body class="antialiased text-gray-900">
 
+    <!-- NEW: Navigation Bar -->
+    <nav class="bg-white shadow-md sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-center space-x-4">
+                <!-- Links to other pages -->
+                <a href="index.html" class="text-blue-600 border-b-2 border-blue-600 px-3 py-4 font-medium" aria-current="page">Log Inventory</a>
+                <a href="transactions.html" class="text-gray-500 hover:text-blue-600 px-3 py-4 font-medium">View Transactions</a>
+            </div>
+        </div>
+    </nav>
+
+
     <!-- Main Container -->
     <!-- Removed 'container' class to allow full width -->
-    <div class="p-4 sm:p-6 lg:p-8">
+    <!-- Added pt-4 to give space below the new nav -->
+    <div class="p-4 sm:p-6 lg:p-8 pt-4">
 
         <!-- Grid Layout -->
         <!-- CHANGED: from lg:grid-cols-3 to lg:grid-cols-4 -->
@@ -90,11 +106,12 @@
             <!-- Left Column: Form -->
             <!-- CHANGED: from lg:col-span-1 (of 3) to lg:col-span-1 (of 4) -->
             <!-- CHANGED: Removed fixed height on lg screens. Now h-auto, so page will scroll -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-[90vh] overflow-y-auto lg:h-auto lg:overflow-y-visible">
+            <!-- Made form sticky on large screens -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-[90vh] overflow-y-auto lg:h-[calc(100vh-6rem)] lg:sticky lg:top-20">
                 
                 <!-- Sticky Form Header -->
                 <div id="formHeader" class="border-b pb-4 mb-6">
-                    <h2 class="text-3xl font-bold text-gray-800">Log Supply</h2>
+                    <h2 class="text-3xl font-bold text-gray-800">PTFD EMS Inventory</h2>
                     <p class="text-gray-500">Add or edit an item.</p>
                 </div>
                 
@@ -170,7 +187,7 @@
             <!-- Right Column: Data Table -->
             <!-- Set explicit heights for scrolling on mobile and desktop -->
             <!-- CHANGED: from lg:col-span-2 (of 3) to lg:col-span-3 (of 4) -->
-            <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg h-[90vh] lg:h-[calc(100vh-4rem)] overflow-y-auto">
+            <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg h-[90vh] lg:h-[calc(100vh-6rem)] overflow-y-auto">
                 <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Existing Supplies</h2>
 
                 <!-- Search and Export -->

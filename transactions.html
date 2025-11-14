@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
+    <title>PTFD EMS Supply Transactions Log</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+        }
+        /* Simple loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-900">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="flex justify-center space-x-4">
+                <!-- Links to other pages -->
+                <a href="index.html" class="text-gray-500 hover:text-blue-600 px-3 py-4 font-medium">Log Inventory</a>
+                <a href="transactions.html" class="text-blue-600 border-b-2 border-blue-600 px-3 py-4 font-medium" aria-current="page">View Transactions</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- Data Table -->
+        <div class="bg-white p-6 rounded-xl shadow-lg h-auto overflow-y-auto">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Transaction Log</h2>
+            <p class="text-gray-500 mb-6">Showing all items logged out from inventory. Updates in real-time.</p>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Date & Time</th>
+                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Item</th>
+                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Quantity Taken</th>
+                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Reason</th>
+                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Logged By</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTable" class="bg-white divide-y divide-gray-200">
+                        <!-- Rows will be injected here -->
+                    </tbody>
+                </table>
+                <!-- Loading State -->
+                <div id="loadingIndicator" class="flex flex-col items-center justify-center p-8">
+                    <div class="spinner"></div>
+                    <p class="text-gray-500 mt-4">Loading transactions...</p>
+                </div>
+                <p id="loadingMessage" class="text-gray-500 text-center p-8" style="display: none;">Authenticating...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import functions from the Firebase SDK
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            onSnapshot, 
+            collection,
+            query // Import query
+            // We don't need orderBy for this simple log, but you could import it
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Config (Copied from your index.html) ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyBTjbo2ndQYowrvmcDxeXfvNb_E3nSijH8",
+          authDomain: "ems-inventory.firebaseapp.com",
+          projectId: "ems-inventory",
+          storageBucket: "ems-inventory.firebasestorage.app",
+          messagingSenderId: "1076236960850",
+          appId: "1:1076236960850:web:07cc24cd638ef4a8298b8b",
+          measurementId: "G-BFFXWP4G42"
+        };
+        
+        // --- Firestore Collection Names ---
+        const TRANSACTIONS_COLLECTION = 'transactions';
+
+        // --- Global Variables ---
+        let db;
+        let auth;
+        let currentUserId;
+        let transactionsListener = null; // To hold the onSnapshot unsubscribe function
+        
+        // --- Table Elements ---
+        const tableBody = document.getElementById('transactionsTable');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingMessage = document.getElementById('loadingMessage');
+        
+
+        /**
+         * Renders the data into the HTML table.
+         */
+        function renderTable(transactions) {
+            
+            // Sort by loggedAt timestamp, newest first
+            transactions.sort((a, b) => {
+                const dateA = a.loggedAt?.toDate ? a.loggedAt.toDate() : new Date(0);
+                const dateB = b.loggedAt?.toDate ? b.loggedAt.toDate() : new Date(0);
+                return dateB - dateA; // Newest first
+            });
+
+            tableBody.innerHTML = ''; // Clear existing table
+            if (transactions.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No transactions found.</td></tr>`;
+                return;
+            }
+
+            transactions.forEach(tx => {
+                // Format "loggedAt" timestamp
+                let loggedDate = 'N/A';
+                if (tx.loggedAt && tx.loggedAt.toDate) { // Check if it's a Firestore Timestamp
+                    loggedDate = tx.loggedAt.toDate().toLocaleString('en-US', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                const row = `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500">${loggedDate}</td>
+                        <td class="p-3 whitespace-nowrap text-sm font-semibold text-gray-900">${tx.item || ''}</td>
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500">${tx.quantityTaken || ''}</td>
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500">${tx.reason || ''}</td>
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500">${tx.person || ''}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+        
+        /**
+         * Attaches the Firestore listener to the transactions collection.
+         */
+        function attachDataListener() {
+            if (transactionsListener) {
+                transactionsListener(); // Detach old listener
+            }
+            
+            const collectionRef = collection(db, TRANSACTIONS_COLLECTION);
+            // Optional: Order by date in the query itself.
+            // Note: This might require creating an index in Firestore.
+            // const q = query(collectionRef, orderBy("loggedAt", "desc"));
+            // For simplicity, we will sort in JavaScript after fetching.
+            
+            transactionsListener = onSnapshot(collectionRef, (querySnapshot) => {
+                const transactions = [];
+                querySnapshot.forEach((doc) => {
+                    transactions.push({ id: doc.id, ...doc.data() });
+                });
+                
+                renderTable(transactions); // Render the live data
+                
+                // Hide loading indicators
+                loadingIndicator.style.display = 'none';
+                loadingMessage.style.display = 'none';
+                
+            }, (error) => {
+                console.error('Error getting documents:', error);
+                loadingMessage.textContent = `Error loading data: ${error.message}`;
+                loadingMessage.className = 'text-red-500 text-center p-8';
+            });
+        }
+
+        /**
+         * --- APP INITIALIZATION ---
+         */
+        function initApp() {
+            try {
+                // Initialize Firebase
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                // setLogLevel('debug');
+                loadingMessage.style.display = 'block';
+
+                // Listen for authentication state changes
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        // User is signed in
+                        currentUserId = user.uid;
+                        console.log("User authenticated:", currentUserId);
+                        loadingMessage.textContent = 'Authenticated. Loading transactions...';
+                        
+                        // Attach Firestore listener
+                        attachDataListener();
+
+                    } else {
+                        // User is signed out. Try to sign in.
+                        currentUserId = null;
+                        loadingMessage.textContent = 'Authenticating...';
+                        console.log("No user. Attempting sign-in...");
+                        try {
+                            await signInAnonymously(auth);
+                            // The onAuthStateChanged listener will fire again
+                            // once signed in, triggering the data load.
+                        } catch (error) {
+                            console.error('Error signing in:', error);
+                            loadingMessage.textContent = `Authentication Failed: ${error.message}`;
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error initializing app:', error);
+                loadingIndicator.style.display = 'none';
+                loadingMessage.textContent = `Critical Error: ${error.message}`;
+                loadingMessage.style.display = 'block';
+            }
+        }
+
+        // --- Start the application ---
+        initApp();
+    </script>
+</body>
+</html>
