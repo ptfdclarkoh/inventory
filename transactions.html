@@ -43,19 +43,67 @@
     <!-- Main Container -->
     <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
-        <!-- Data Table -->
+        <!-- Data Table Card -->
         <div class="bg-white p-6 rounded-xl shadow-lg h-auto overflow-y-auto">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Transaction Log</h2>
-            <p class="text-gray-500 mb-6">Showing all items logged out from inventory. Updates in real-time.</p>
+            
+            <!-- Header with Download Button -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Transaction Log</h2>
+                    <p class="text-gray-500 mt-1">Real-time inventory history.</p>
+                </div>
+                <button id="downloadBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow flex items-center text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download CSV
+                </button>
+            </div>
+
+            <!-- Search and Filter Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                <!-- Search Input -->
+                <div class="md:col-span-6">
+                    <label for="searchInput" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Search</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <input type="text" id="searchInput" placeholder="Search items, people, or reasons..." 
+                            class="w-full pl-10 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-shadow">
+                    </div>
+                </div>
+
+                <!-- Start Date -->
+                <div class="md:col-span-3">
+                    <label for="startDate" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Start Date</label>
+                    <input type="date" id="startDate" 
+                        class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-700">
+                </div>
+
+                <!-- End Date -->
+                <div class="md:col-span-3">
+                    <label for="endDate" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">End Date</label>
+                    <input type="date" id="endDate" 
+                        class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-gray-700">
+                </div>
+            </div>
+
+            <!-- Filter Status / Results Count -->
+            <div id="resultsCount" class="text-sm text-gray-500 mb-2 hidden">
+                Showing <span id="showingCount" class="font-semibold text-gray-900">0</span> of <span id="totalCount">0</span> transactions
+            </div>
 
             <!-- Table Container -->
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-100">
                         <tr>
                             <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Date & Time</th>
                             <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Item</th>
-                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Quantity Taken</th>
+                            <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Quantity</th>
                             <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Reason</th>
                             <th class="p-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Logged By</th>
                         </tr>
@@ -64,12 +112,19 @@
                         <!-- Rows will be injected here -->
                     </tbody>
                 </table>
+                
                 <!-- Loading State -->
                 <div id="loadingIndicator" class="flex flex-col items-center justify-center p-8">
                     <div class="spinner"></div>
                     <p class="text-gray-500 mt-4">Loading transactions...</p>
                 </div>
                 <p id="loadingMessage" class="text-gray-500 text-center p-8" style="display: none;">Authenticating...</p>
+                
+                <!-- Empty State (Hidden by default) -->
+                <div id="emptyState" class="hidden p-8 text-center text-gray-500">
+                    <p>No transactions match your filters.</p>
+                    <button id="clearFiltersBtn" class="mt-2 text-blue-600 hover:underline text-sm font-medium">Clear Filters</button>
+                </div>
             </div>
         </div>
     </div>
@@ -77,17 +132,21 @@
     <script type="module">
         // Import functions from the Firebase SDK
         import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, 
             onSnapshot, 
             collection,
-            query // Import query
-            // We don't need orderBy for this simple log, but you could import it
+            query
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase Config (Copied from your index.html) ---
-        const firebaseConfig = {
+        // --- Global Environment Variables ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Fallback config
+        const fallbackConfig = {
           apiKey: "AIzaSyBTjbo2ndQYowrvmcDxeXfvNb_E3nSijH8",
           authDomain: "ems-inventory.firebaseapp.com",
           projectId: "ems-inventory",
@@ -97,54 +156,201 @@
           measurementId: "G-BFFXWP4G42"
         };
         
-        // --- Firestore Collection Names ---
-        const TRANSACTIONS_COLLECTION = 'transactions';
+        const configToUse = firebaseConfig || fallbackConfig;
 
         // --- Global Variables ---
         let db;
         let auth;
         let currentUserId;
-        let transactionsListener = null; // To hold the onSnapshot unsubscribe function
+        let transactionsListener = null;
+        let allTransactions = []; // Source of truth from DB
+        let displayedTransactions = []; // Filtered list for View & CSV
         
-        // --- Table Elements ---
+        // --- DOM Elements ---
         const tableBody = document.getElementById('transactionsTable');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const loadingMessage = document.getElementById('loadingMessage');
-        
+        const downloadBtn = document.getElementById('downloadBtn');
+        const searchInput = document.getElementById('searchInput');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const resultsCount = document.getElementById('resultsCount');
+        const showingCountSpan = document.getElementById('showingCount');
+        const totalCountSpan = document.getElementById('totalCount');
+        const emptyState = document.getElementById('emptyState');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+        /**
+         * Helper to format timestamps
+         */
+        function formatTimestamp(timestamp) {
+            if (timestamp && timestamp.toDate) {
+                return timestamp.toDate().toLocaleString('en-US', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            return 'N/A';
+        }
+
+        /**
+         * Filtering Logic
+         */
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const startDateVal = startDateInput.value;
+            const endDateVal = endDateInput.value;
+
+            displayedTransactions = allTransactions.filter(tx => {
+                // 1. Text Search
+                const item = (tx.item || '').toLowerCase();
+                const reason = (tx.reason || '').toLowerCase();
+                const person = (tx.person || '').toLowerCase();
+                
+                const matchesSearch = !searchTerm || 
+                                      item.includes(searchTerm) || 
+                                      reason.includes(searchTerm) || 
+                                      person.includes(searchTerm);
+
+                // 2. Date Filter
+                let matchesDate = true;
+                if (startDateVal || endDateVal) {
+                    if (tx.loggedAt && tx.loggedAt.toDate) {
+                        const txDate = tx.loggedAt.toDate();
+                        // Reset time part for comparison to include the whole day
+                        txDate.setHours(0,0,0,0); 
+                        
+                        if (startDateVal) {
+                            const start = new Date(startDateVal);
+                            // Fix Timezone offset issues by treating input as local midnight
+                            start.setMinutes(start.getMinutes() + start.getTimezoneOffset()); 
+                            if (txDate < start) matchesDate = false;
+                        }
+                        
+                        if (endDateVal) {
+                            const end = new Date(endDateVal);
+                            end.setMinutes(end.getMinutes() + end.getTimezoneOffset());
+                            if (txDate > end) matchesDate = false;
+                        }
+                    }
+                }
+
+                return matchesSearch && matchesDate;
+            });
+
+            updateUI();
+        }
+
+        function updateUI() {
+            renderTable(displayedTransactions);
+            
+            // Update counts
+            showingCountSpan.textContent = displayedTransactions.length;
+            totalCountSpan.textContent = allTransactions.length;
+            
+            // Show/Hide count text
+            if (allTransactions.length > 0) {
+                resultsCount.classList.remove('hidden');
+            }
+        }
+
+        function clearFilters() {
+            searchInput.value = '';
+            startDateInput.value = '';
+            endDateInput.value = '';
+            applyFilters();
+        }
+
+        // --- Event Listeners for Filters ---
+        searchInput.addEventListener('input', applyFilters);
+        startDateInput.addEventListener('change', applyFilters);
+        endDateInput.addEventListener('change', applyFilters);
+        clearFiltersBtn.addEventListener('click', clearFilters);
+
+        /**
+         * CSV Download Functionality
+         */
+        function downloadCSV() {
+            // Use displayedTransactions to respect filters
+            if (!displayedTransactions || displayedTransactions.length === 0) {
+                alert("No data to download matching current filters.");
+                return;
+            }
+
+            const headers = ["Date & Time", "Item", "Quantity Taken", "Reason", "Logged By"];
+            const csvRows = [];
+            csvRows.push(headers.join(","));
+
+            displayedTransactions.forEach(tx => {
+                const escape = (text) => {
+                    if (text === null || text === undefined) return '';
+                    const stringText = String(text);
+                    if (stringText.includes(',') || stringText.includes('"') || stringText.includes('\n')) {
+                        return `"${stringText.replace(/"/g, '""')}"`;
+                    }
+                    return stringText;
+                };
+
+                const row = [
+                    escape(formatTimestamp(tx.loggedAt)),
+                    escape(tx.item),
+                    escape(tx.quantityTaken),
+                    escape(tx.reason),
+                    escape(tx.person)
+                ];
+                csvRows.push(row.join(","));
+            });
+
+            const csvString = csvRows.join("\n");
+            const blob = new Blob([csvString], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.setAttribute("hidden", "");
+            a.setAttribute("href", url);
+            a.setAttribute("download", `inventory_transactions_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        downloadBtn.addEventListener('click', downloadCSV);
+
 
         /**
          * Renders the data into the HTML table.
          */
         function renderTable(transactions) {
+            tableBody.innerHTML = ''; 
             
-            // Sort by loggedAt timestamp, newest first
-            transactions.sort((a, b) => {
-                const dateA = a.loggedAt?.toDate ? a.loggedAt.toDate() : new Date(0);
-                const dateB = b.loggedAt?.toDate ? b.loggedAt.toDate() : new Date(0);
-                return dateB - dateA; // Newest first
-            });
-
-            tableBody.innerHTML = ''; // Clear existing table
             if (transactions.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No transactions found.</td></tr>`;
+                emptyState.classList.remove('hidden');
+                // If no transactions exist at all (not just filtered), handle that differently
+                if (allTransactions.length === 0) {
+                   emptyState.innerHTML = `<p>No transactions found in database.</p>`;
+                } else {
+                   // Standard filter empty state
+                   emptyState.innerHTML = `
+                        <p>No transactions match your filters.</p>
+                        <button id="innerClearBtn" class="mt-2 text-blue-600 hover:underline text-sm font-medium">Clear Filters</button>
+                   `;
+                   // Re-bind the dynamic button
+                   document.getElementById('innerClearBtn').addEventListener('click', clearFilters);
+                }
+                downloadBtn.disabled = true;
                 return;
             }
 
+            emptyState.classList.add('hidden');
+            downloadBtn.disabled = false;
+
             transactions.forEach(tx => {
-                // Format "loggedAt" timestamp
-                let loggedDate = 'N/A';
-                if (tx.loggedAt && tx.loggedAt.toDate) { // Check if it's a Firestore Timestamp
-                    loggedDate = tx.loggedAt.toDate().toLocaleString('en-US', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                }
+                const loggedDate = formatTimestamp(tx.loggedAt);
 
                 const row = `
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-50 transition-colors">
                         <td class="p-3 whitespace-nowrap text-sm text-gray-500">${loggedDate}</td>
                         <td class="p-3 whitespace-nowrap text-sm font-semibold text-gray-900">${tx.item || ''}</td>
                         <td class="p-3 whitespace-nowrap text-sm text-gray-500">${tx.quantityTaken || ''}</td>
@@ -157,26 +363,30 @@
         }
         
         /**
-         * Attaches the Firestore listener to the transactions collection.
+         * Attaches the Firestore listener
          */
         function attachDataListener() {
             if (transactionsListener) {
-                transactionsListener(); // Detach old listener
+                transactionsListener(); 
             }
             
-            const collectionRef = collection(db, TRANSACTIONS_COLLECTION);
-            // Optional: Order by date in the query itself.
-            // Note: This might require creating an index in Firestore.
-            // const q = query(collectionRef, orderBy("loggedAt", "desc"));
-            // For simplicity, we will sort in JavaScript after fetching.
-            
+            const collectionRef = collection(db, 'transactions'); 
+
             transactionsListener = onSnapshot(collectionRef, (querySnapshot) => {
                 const transactions = [];
                 querySnapshot.forEach((doc) => {
                     transactions.push({ id: doc.id, ...doc.data() });
                 });
                 
-                renderTable(transactions); // Render the live data
+                // Sort: Newest first
+                transactions.sort((a, b) => {
+                    const dateA = a.loggedAt?.toDate ? a.loggedAt.toDate() : new Date(0);
+                    const dateB = b.loggedAt?.toDate ? b.loggedAt.toDate() : new Date(0);
+                    return dateB - dateA; 
+                });
+
+                allTransactions = transactions; // Update Source of Truth
+                applyFilters(); // Apply current filters to new data
                 
                 // Hide loading indicators
                 loadingIndicator.style.display = 'none';
@@ -194,34 +404,26 @@
          */
         function initApp() {
             try {
-                // Initialize Firebase
-                const app = initializeApp(firebaseConfig);
+                const app = initializeApp(configToUse);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                // setLogLevel('debug');
                 loadingMessage.style.display = 'block';
 
-                // Listen for authentication state changes
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // User is signed in
                         currentUserId = user.uid;
-                        console.log("User authenticated:", currentUserId);
                         loadingMessage.textContent = 'Authenticated. Loading transactions...';
-                        
-                        // Attach Firestore listener
                         attachDataListener();
-
                     } else {
-                        // User is signed out. Try to sign in.
                         currentUserId = null;
                         loadingMessage.textContent = 'Authenticating...';
-                        console.log("No user. Attempting sign-in...");
                         try {
-                            await signInAnonymously(auth);
-                            // The onAuthStateChanged listener will fire again
-                            // once signed in, triggering the data load.
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
                         } catch (error) {
                             console.error('Error signing in:', error);
                             loadingMessage.textContent = `Authentication Failed: ${error.message}`;
@@ -237,7 +439,6 @@
             }
         }
 
-        // --- Start the application ---
         initApp();
     </script>
 </body>
